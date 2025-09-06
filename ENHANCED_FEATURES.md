@@ -55,27 +55,35 @@ The CrimeLensChennai dashboard has been significantly enhanced with advanced AI-
 - Reduce operational costs
 - Improve response times
 
-### 4. Community Safety Score Dashboard 🛡️
-**Location**: `client/src/components/community-safety-score.tsx`
+### 4. Social Media Analysis & Sentiment Monitoring 🐦
+**Location**: `client/src/components/social-media-analysis.tsx`
 
 **Features**:
-- Comprehensive district safety scoring (A+ to D grades)
-- Multi-metric evaluation system:
-  - Crime rates (25% weight)
-  - Emergency response times (20% weight)
-  - Community engagement (15% weight)
-  - Infrastructure quality (15% weight)
-  - Public sentiment (15% weight)
-  - Economic safety (10% weight)
-- Trend analysis and historical scoring
-- Actionable improvement insights
-- Comparative district rankings
+- **Real-time Social Media Monitoring**: Live Twitter, Facebook, and Instagram feed analysis
+- **Advanced Sentiment Analysis**: AI-powered sentiment detection with confidence scoring
+- **Multilingual Support**: English, Tamil, Hindi, and Telugu language detection and analysis
+- **Hate Speech Detection**: AI-powered hate speech and threat detection using `@safekids-ai/nlp-js-node`
+- **Crime-Related Content Filtering**: Automatic identification of safety and crime-related posts
+- **District-wise Analysis**: Hyperlocalized sentiment tracking across Chennai districts
+- **Trending Topics**: Real-time trending hashtags and topics with growth indicators
+- **Threat Level Classification**: Automated risk assessment (low, medium, high, critical)
+- **Platform Analytics**: Cross-platform monitoring and engagement metrics
+- **Search and Filtering**: Advanced filtering by district, platform, language, and content type
+
+**Technical Implementation**:
+- **NLP Libraries**: `node-nlp`, `wink-nlp`, and `sentiment` for sentiment analysis
+- **Language Detection**: `franc-min` and `langdetect` for multilingual content identification
+- **Hate Speech Detection**: `@safekids-ai/nlp-js-node` for threat and harassment detection
+- **Indian Language Support**: Custom models for Tamil, Hindi, and Telugu analysis
+- **Real-time Processing**: Live data streaming with 30-second update intervals
+- **Confidence Scoring**: Advanced ML confidence metrics for all predictions
 
 **Benefits**:
-- Holistic safety assessment
-- Data-driven policy decisions
-- Community engagement metrics
-- Performance benchmarking
+- Early threat detection and prevention
+- Community sentiment monitoring
+- Crisis communication management
+- Evidence-based public relations
+- Proactive community engagement
 
 ### 5. Advanced Reporting & Export System 📊
 **Location**: `client/src/components/advanced-reporting.tsx`
@@ -104,7 +112,7 @@ The main dashboard now features a comprehensive tabbed interface:
 2. **Live Feed** - Real-time incident monitoring
 3. **AI Predictions** - Predictive analytics and forecasting
 4. **Resources** - Allocation optimization and management
-5. **Safety Score** - Community safety assessment
+5. **Social Media** - Twitter/Facebook sentiment analysis and threat detection
 6. **Reports** - Advanced reporting and export tools
 
 ### Responsive Design
@@ -121,6 +129,10 @@ The main dashboard now features a comprehensive tabbed interface:
 - **Maps**: React-Leaflet with OpenStreetMap
 - **State Management**: React Query for API state
 - **Date Handling**: date-fns library
+- **NLP & Sentiment Analysis**: node-nlp, wink-nlp, sentiment
+- **Hate Speech Detection**: @safekids-ai/nlp-js-node
+- **Language Detection**: franc-min, langdetect
+- **Social Media APIs**: Twitter API v2, Facebook Graph API
 
 ### Architecture
 - Component-based architecture with reusable UI elements

@@ -14,9 +14,9 @@ import { ChennaiCrimeMap } from "@/components/chennai-crime-map";
 import { RealTimeCrimeFeed } from "@/components/real-time-crime-feed";
 import { PredictiveHotspotAnalysis } from "@/components/predictive-hotspot-analysis";
 import { ResourceAllocationOptimizer } from "@/components/resource-allocation-optimizer";
-import { CommunitySafetyScore } from "@/components/community-safety-score";
+import { SocialMediaAnalysis } from "@/components/social-media-analysis";
 import { AdvancedReporting } from "@/components/advanced-reporting";
-import { RefreshCw, Download, MapPin, Eye, Filter, Activity, Brain, Route, Shield, FileText } from "lucide-react";
+import { RefreshCw, Download, MapPin, Eye, Filter, Activity, Brain, Route, Twitter, FileText } from "lucide-react";
 import type { DashboardData } from "@shared/schema";
 import { useState } from "react";
 
@@ -249,9 +249,9 @@ export default function Dashboard() {
                 <Route className="w-4 h-4" />
                 Resources
               </TabsTrigger>
-              <TabsTrigger value="safety" className="flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Safety Score
+              <TabsTrigger value="social" className="flex items-center gap-2">
+                <Twitter className="w-4 h-4" />
+                Social Media
               </TabsTrigger>
               <TabsTrigger value="reports" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
@@ -363,8 +363,8 @@ export default function Dashboard() {
               <ResourceAllocationOptimizer className="w-full" />
             </TabsContent>
 
-            <TabsContent value="safety">
-              <CommunitySafetyScore className="w-full" />
+            <TabsContent value="social">
+              <SocialMediaAnalysis className="w-full" />
             </TabsContent>
 
             <TabsContent value="reports">
