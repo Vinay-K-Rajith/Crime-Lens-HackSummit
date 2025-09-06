@@ -4,13 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CrimeStatsCard } from "@/components/crime-stats-card";
 import { CrimeTrendChart } from "@/components/crime-trend-chart";
 import { DistrictFilter } from "@/components/district-filter";
 import { AlertsPanel } from "@/components/alerts-panel";
 import { AiInsightsPanel } from "@/components/ai-insights-panel";
 import { ChennaiCrimeMap } from "@/components/chennai-crime-map";
-import { RefreshCw, Download, MapPin, Eye, Filter } from "lucide-react";
+import { RealTimeCrimeFeed } from "@/components/real-time-crime-feed";
+import { PredictiveHotspotAnalysis } from "@/components/predictive-hotspot-analysis";
+import { ResourceAllocationOptimizer } from "@/components/resource-allocation-optimizer";
+import { CommunitySafetyScore } from "@/components/community-safety-score";
+import { AdvancedReporting } from "@/components/advanced-reporting";
+import { RefreshCw, Download, MapPin, Eye, Filter, Activity, Brain, Route, Shield, FileText } from "lucide-react";
 import type { DashboardData } from "@shared/schema";
 import { useState } from "react";
 
@@ -22,6 +28,7 @@ export default function Dashboard() {
     "burglary", 
     "robbery"
   ]);
+  const [activeView, setActiveView] = useState<string>("overview");
 
   const { 
     data: dashboardData, 
@@ -224,95 +231,146 @@ export default function Dashboard() {
 
         {/* Dashboard Content */}
         <div className="h-full overflow-y-auto p-6">
-          {/* Crime Stats Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
-            {filteredCrimeStats.map((stat) => (
-              <CrimeStatsCard key={stat.category.id} crimeStats={stat} />
-            ))}
-          </div>
+          <Tabs value={activeView} onValueChange={setActiveView} className="w-full">
+            <TabsList className="grid w-full grid-cols-6 mb-6">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="live-feed" className="flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Live Feed
+              </TabsTrigger>
+              <TabsTrigger value="predictions" className="flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                AI Predictions
+              </TabsTrigger>
+              <TabsTrigger value="resources" className="flex items-center gap-2">
+                <Route className="w-4 h-4" />
+                Resources
+              </TabsTrigger>
+              <TabsTrigger value="safety" className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Safety Score
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Reports
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Detailed Analytics */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            {/* Crime Map */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-foreground">
-                  Crime Hotspots by District
-                </h3>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" className="text-xs">Heatmap</Button>
-                  <Button size="sm" variant="ghost" className="text-xs">Markers</Button>
-                </div>
+            <TabsContent value="overview" className="space-y-8">
+              {/* Crime Stats Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                {filteredCrimeStats.map((stat) => (
+                  <CrimeStatsCard key={stat.category.id} crimeStats={stat} />
+                ))}
               </div>
 
-              {/* Chennai Crime Map */}
-              <div className="mb-4">
-                <ChennaiCrimeMap 
-                  crimeStats={filteredCrimeStats}
-                  districts={dashboardData.districts}
-                  selectedDistrict={selectedDistrict}
-                  className="h-80 w-full rounded-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground" data-testid="text-total-incidents">
-                    {dashboardData.totalIncidents.toLocaleString()}
+              {/* Detailed Analytics */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                {/* Crime Map */}
+                <Card className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Crime Hotspots by District
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" className="text-xs">Heatmap</Button>
+                      <Button size="sm" variant="ghost" className="text-xs">Markers</Button>
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">Total Incidents</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-accent" data-testid="text-clearance-rate">
-                    {dashboardData.clearanceRate}%
+
+                  {/* Chennai Crime Map */}
+                  <div className="mb-4">
+                    <ChennaiCrimeMap 
+                      crimeStats={filteredCrimeStats}
+                      districts={dashboardData.districts}
+                      selectedDistrict={selectedDistrict}
+                      className="h-80 w-full rounded-lg"
+                    />
                   </div>
-                  <div className="text-sm text-muted-foreground">Case Clearance Rate</div>
-                </div>
-              </div>
-            </Card>
 
-            {/* Trend Analysis */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-foreground">Crime Trends Analysis</h3>
-                <Select defaultValue="last12months">
-                  <SelectTrigger className="w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="last12months">Last 12 Months</SelectItem>
-                    <SelectItem value="last6months">Last 6 Months</SelectItem>
-                    <SelectItem value="last3months">Last 3 Months</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-foreground" data-testid="text-total-incidents">
+                        {dashboardData.totalIncidents.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Incidents</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-accent" data-testid="text-clearance-rate">
+                        {dashboardData.clearanceRate}%
+                      </div>
+                      <div className="text-sm text-muted-foreground">Case Clearance Rate</div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Trend Analysis */}
+                <Card className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-foreground">Crime Trends Analysis</h3>
+                    <Select defaultValue="last12months">
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="last12months">Last 12 Months</SelectItem>
+                        <SelectItem value="last6months">Last 6 Months</SelectItem>
+                        <SelectItem value="last3months">Last 3 Months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="h-80 mb-4">
+                    <CrimeTrendChart crimeStats={filteredCrimeStats} />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-primary">March</div>
+                      <div className="text-xs text-muted-foreground">Peak Month</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-accent">August</div>
+                      <div className="text-xs text-muted-foreground">Lowest Month</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-foreground">47.2</div>
+                      <div className="text-xs text-muted-foreground">Daily Average</div>
+                    </div>
+                  </div>
+                </Card>
               </div>
 
-              <div className="h-80 mb-4">
-                <CrimeTrendChart crimeStats={filteredCrimeStats} />
+              {/* Alerts and Insights */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <AlertsPanel alerts={dashboardData.alerts} />
+                <AiInsightsPanel insights={dashboardData.insights} />
               </div>
+            </TabsContent>
 
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-lg font-bold text-primary">March</div>
-                  <div className="text-xs text-muted-foreground">Peak Month</div>
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-accent">August</div>
-                  <div className="text-xs text-muted-foreground">Lowest Month</div>
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-foreground">47.2</div>
-                  <div className="text-xs text-muted-foreground">Daily Average</div>
-                </div>
-              </div>
-            </Card>
-          </div>
+            <TabsContent value="live-feed">
+              <RealTimeCrimeFeed className="w-full" />
+            </TabsContent>
 
-          {/* Alerts and Insights */}
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <AlertsPanel alerts={dashboardData.alerts} />
-            <AiInsightsPanel insights={dashboardData.insights} />
-          </div>
+            <TabsContent value="predictions">
+              <PredictiveHotspotAnalysis className="w-full" />
+            </TabsContent>
+
+            <TabsContent value="resources">
+              <ResourceAllocationOptimizer className="w-full" />
+            </TabsContent>
+
+            <TabsContent value="safety">
+              <CommunitySafetyScore className="w-full" />
+            </TabsContent>
+
+            <TabsContent value="reports">
+              <AdvancedReporting className="w-full" />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>
