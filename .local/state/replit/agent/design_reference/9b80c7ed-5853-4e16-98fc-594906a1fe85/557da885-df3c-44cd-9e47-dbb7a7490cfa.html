@@ -1,0 +1,666 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crime Lens - Chennai Crime Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                },
+                fontFamily: {
+                    sans: ["Inter", "sans-serif"],
+                }
+            },
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --background: hsl(240 10% 15%);
+            --foreground: hsl(240 5% 96%);
+            --card: hsl(240 10% 18%);
+            --card-foreground: hsl(240 5% 96%);
+            --popover: hsl(240 10% 18%);
+            --popover-foreground: hsl(240 5% 96%);
+            --primary: hsl(280 100% 70%);
+            --primary-foreground: hsl(240 5% 96%);
+            --secondary: hsl(240 5% 26%);
+            --secondary-foreground: hsl(240 5% 96%);
+            --muted: hsl(240 5% 26%);
+            --muted-foreground: hsl(240 5% 65%);
+            --accent: hsl(170 70% 50%);
+            --accent-foreground: hsl(240 10% 15%);
+            --destructive: hsl(0 72% 51%);
+            --destructive-foreground: hsl(240 5% 96%);
+            --border: hsl(240 6% 26%);
+            --input: hsl(240 6% 26%);
+            --ring: hsl(280 100% 70%);
+            --radius: 0.75rem;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-purple {
+            background: linear-gradient(135deg, hsl(280 100% 70%), hsl(260 100% 60%));
+        }
+        
+        .gradient-teal {
+            background: linear-gradient(135deg, hsl(170 70% 50%), hsl(190 70% 45%));
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 120px;
+            width: 100%;
+        }
+        
+        .crime-trend-up {
+            color: hsl(0 72% 51%);
+        }
+        
+        .crime-trend-down {
+            color: hsl(170 70% 50%);
+        }
+    </style>
+</head>
+
+<!-- @COMPONENT: CrimeLensApp [Main application component] -->
+<body class="bg-background text-foreground min-h-screen">
+    <div class="flex h-screen">
+        <!-- @COMPONENT: Sidebar [Navigation and filters] -->
+        <aside class="w-80 bg-card border-r border-border flex flex-col">
+            <!-- @COMPONENT: Header [Logo and title] -->
+            <div class="p-6 border-b border-border">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center">
+                        <i class="fas fa-eye text-primary-foreground text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-foreground">CRIME LENS</h1>
+                        <p class="text-sm text-muted-foreground">CHENNAI ANALYTICS 2024</p>
+                    </div>
+                </div>
+                <p class="text-xs text-muted-foreground mt-3">Real-time crime analytics dashboard for Chennai Metropolitan Police</p>
+            </div>
+            
+            <!-- @COMPONENT: MapFilters [Filter controls] -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                            <i class="fas fa-filter text-primary"></i>
+                            MAP FILTERS
+                        </h3>
+                        <div class="space-y-3">
+                            <button class="w-full text-left px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
+                                All Districts
+                            </button>
+                            <button class="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md text-sm" data-event="click:filterByDistrict">
+                                Central Chennai
+                            </button>
+                            <button class="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md text-sm" data-event="click:filterByDistrict">
+                                North Chennai
+                            </button>
+                            <button class="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md text-sm" data-event="click:filterByDistrict">
+                                South Chennai
+                            </button>
+                            <button class="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md text-sm" data-event="click:filterByDistrict">
+                                Tambaram
+                            </button>
+                            <button class="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md text-sm" data-event="click:filterByDistrict">
+                                Avadi
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground mb-3">CRIME CATEGORIES</h3>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" checked class="rounded border-border bg-input" data-implementation="Use controlled checkbox component">
+                                <span class="text-muted-foreground">Theft</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" checked class="rounded border-border bg-input">
+                                <span class="text-muted-foreground">Burglary</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" checked class="rounded border-border bg-input">
+                                <span class="text-muted-foreground">Robbery</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="rounded border-border bg-input">
+                                <span class="text-muted-foreground">Violence</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="rounded border-border bg-input">
+                                <span class="text-muted-foreground">Drug Offences</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground mb-3">TIME PERIOD</h3>
+                        <select class="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground" data-implementation="Use controlled select component">
+                            <option>Last 30 Days</option>
+                            <option>Last 90 Days</option>
+                            <option>Last 6 Months</option>
+                            <option>Last Year</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- @COMPONENT: ExportSection [Export and legend] -->
+            <div class="p-6 border-t border-border">
+                <button class="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors mb-4" data-event="click:exportData">
+                    <i class="fas fa-download mr-2"></i>
+                    Export Report
+                </button>
+                <div class="text-xs text-muted-foreground">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-3 h-3 bg-primary rounded-full"></div>
+                        <span>High Priority</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 bg-accent rounded-full"></div>
+                        <span>Medium Priority</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <!-- @END_COMPONENT: Sidebar -->
+        
+        <!-- @COMPONENT: MainContent [Dashboard content area] -->
+        <main class="flex-1 overflow-hidden">
+            <!-- @COMPONENT: TopBar [Header with controls] -->
+            <header class="bg-card border-b border-border px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-foreground">Chennai Crime Dashboard</h2>
+                        <p class="text-sm text-muted-foreground">All Chennai Districts • Real-time Analytics</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 text-sm">
+                            <div class="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+                            <span class="text-muted-foreground">Live Data</span>
+                        </div>
+                        <button class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/80 transition-colors" data-event="click:refreshData">
+                            <i class="fas fa-sync mr-2"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <!-- @END_COMPONENT: TopBar -->
+            
+            <!-- @COMPONENT: DashboardGrid [Main dashboard content] -->
+            <div class="h-full overflow-y-auto p-6">
+                <!-- @COMPONENT: CrimeStatsGrid [Crime statistics cards] -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+                    <!-- @MAP: crimeCategories.map(category => ( -->
+                    <!-- @COMPONENT: CrimeStatCard [Individual crime stat] -->
+                    <div class="bg-card rounded-lg p-6 border border-border hover:border-primary/50 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-user-secret text-primary"></i>
+                                <span class="text-sm font-medium text-muted-foreground">THEFT</span>
+                            </div>
+                            <i class="fas fa-info-circle text-muted-foreground text-sm"></i>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-foreground mb-1" data-bind="categories.theft.total">8,247</div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.theft.period">JAN-NOV 2024</div>
+                        </div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-arrow-up text-destructive text-xs"></i>
+                                <span class="text-xs crime-trend-up font-medium" data-bind="categories.theft.change">+12.3%</span>
+                            </div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.theft.rate">PER 1,000 RESIDENTS</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="theftChart" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="mt-3 text-xs text-muted-foreground">
+                            <span data-bind="categories.theft.hotspot">HOTSPOT: T.NAGAR • KODAMBAKKAM</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-lg p-6 border border-border hover:border-primary/50 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-home text-primary"></i>
+                                <span class="text-sm font-medium text-muted-foreground">BURGLARY</span>
+                            </div>
+                            <i class="fas fa-info-circle text-muted-foreground text-sm"></i>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-foreground mb-1" data-bind="categories.burglary.total">3,156</div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.burglary.period">JAN-NOV 2024</div>
+                        </div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-arrow-down text-accent text-xs"></i>
+                                <span class="text-xs crime-trend-down font-medium" data-bind="categories.burglary.change">-8.7%</span>
+                            </div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.burglary.rate">PER 1,000 RESIDENTS</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="burglaryChart" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="mt-3 text-xs text-muted-foreground">
+                            <span data-bind="categories.burglary.hotspot">HOTSPOT: ANNA NAGAR • VELACHERY</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-lg p-6 border border-border hover:border-primary/50 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-mask text-primary"></i>
+                                <span class="text-sm font-medium text-muted-foreground">ROBBERY</span>
+                            </div>
+                            <i class="fas fa-info-circle text-muted-foreground text-sm"></i>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-foreground mb-1" data-bind="categories.robbery.total">1,923</div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.robbery.period">JAN-NOV 2024</div>
+                        </div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-arrow-up text-destructive text-xs"></i>
+                                <span class="text-xs crime-trend-up font-medium" data-bind="categories.robbery.change">+5.4%</span>
+                            </div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.robbery.rate">PER 1,000 RESIDENTS</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="robberyChart" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="mt-3 text-xs text-muted-foreground">
+                            <span data-bind="categories.robbery.hotspot">HOTSPOT: EGMORE • MYLAPORE</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-lg p-6 border border-border hover:border-primary/50 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-fist-raised text-primary"></i>
+                                <span class="text-sm font-medium text-muted-foreground">VIOLENCE</span>
+                            </div>
+                            <i class="fas fa-info-circle text-muted-foreground text-sm"></i>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-foreground mb-1" data-bind="categories.violence.total">2,087</div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.violence.period">JAN-NOV 2024</div>
+                        </div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-arrow-down text-accent text-xs"></i>
+                                <span class="text-xs crime-trend-down font-medium" data-bind="categories.violence.change">-15.2%</span>
+                            </div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.violence.rate">PER 1,000 RESIDENTS</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="violenceChart" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="mt-3 text-xs text-muted-foreground">
+                            <span data-bind="categories.violence.hotspot">HOTSPOT: WASHERMENPET • PURASAWALKAM</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-lg p-6 border border-border hover:border-primary/50 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-pills text-primary"></i>
+                                <span class="text-sm font-medium text-muted-foreground">DRUG CRIMES</span>
+                            </div>
+                            <i class="fas fa-info-circle text-muted-foreground text-sm"></i>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-foreground mb-1" data-bind="categories.drugs.total">1,456</div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.drugs.period">JAN-NOV 2024</div>
+                        </div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-arrow-up text-destructive text-xs"></i>
+                                <span class="text-xs crime-trend-up font-medium" data-bind="categories.drugs.change">+23.1%</span>
+                            </div>
+                            <div class="text-xs text-muted-foreground" data-bind="categories.drugs.rate">PER 1,000 RESIDENTS</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="drugsChart" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="mt-3 text-xs text-muted-foreground">
+                            <span data-bind="categories.drugs.hotspot">HOTSPOT: ROYAPURAM • TONDIARPET</span>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+                <!-- @END_COMPONENT: CrimeStatsGrid -->
+                
+                <!-- @COMPONENT: DetailedAnalytics [Lower section with map and detailed charts] -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    <!-- @COMPONENT: CrimeMap [Geographic visualization] -->
+                    <div class="bg-card rounded-lg p-6 border border-border">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-foreground">Crime Hotspots by District</h3>
+                            <div class="flex items-center gap-2">
+                                <button class="px-3 py-1 bg-primary text-primary-foreground rounded text-xs font-medium">Heatmap</button>
+                                <button class="px-3 py-1 text-muted-foreground hover:text-foreground rounded text-xs">Markers</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Chennai districts crime map visualization -->
+                        <!-- A stylized map of Chennai showing crime hotspots and district boundaries -->
+                        <div class="relative h-80 bg-muted rounded-lg overflow-hidden" data-implementation="Integrate Chennai map with crime data visualization">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="fas fa-map-marked-alt text-6xl text-muted-foreground mb-4"></i>
+                                    <p class="text-muted-foreground">Interactive Chennai Crime Map</p>
+                                    <p class="text-sm text-muted-foreground mt-2">Click districts to view detailed statistics</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Mock hotspot indicators -->
+                            <div class="absolute top-16 left-20 w-4 h-4 bg-destructive rounded-full animate-pulse" title="High Crime Zone: T.Nagar"></div>
+                            <div class="absolute top-24 right-24 w-3 h-3 bg-primary rounded-full animate-pulse" title="Medium Crime Zone: Anna Nagar"></div>
+                            <div class="absolute bottom-20 left-16 w-3 h-3 bg-accent rounded-full animate-pulse" title="Low Crime Zone: Velachery"></div>
+                            <div class="absolute bottom-32 right-20 w-4 h-4 bg-destructive rounded-full animate-pulse" title="High Crime Zone: Egmore"></div>
+                        </div>
+                        
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-foreground" data-bind="totalIncidents">16,869</div>
+                                <div class="text-sm text-muted-foreground">Total Incidents</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-accent" data-bind="clearanceRate">73.2%</div>
+                                <div class="text-sm text-muted-foreground">Case Clearance Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: CrimeMap -->
+                    
+                    <!-- @COMPONENT: TrendAnalysis [Detailed trend charts] -->
+                    <div class="bg-card rounded-lg p-6 border border-border">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-foreground">Crime Trends Analysis</h3>
+                            <select class="px-3 py-1 bg-input border border-border rounded text-sm text-foreground" data-implementation="Use controlled select for time period">
+                                <option>Last 12 Months</option>
+                                <option>Last 6 Months</option>
+                                <option>Last 3 Months</option>
+                            </select>
+                        </div>
+                        
+                        <div class="h-80">
+                            <canvas id="mainTrendChart" class="w-full h-full"></canvas>
+                        </div>
+                        
+                        <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="text-lg font-bold text-primary" data-bind="peakMonth">March</div>
+                                <div class="text-xs text-muted-foreground">Peak Month</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-accent" data-bind="lowestMonth">August</div>
+                                <div class="text-xs text-muted-foreground">Lowest Month</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-foreground" data-bind="avgDaily">47.2</div>
+                                <div class="text-xs text-muted-foreground">Daily Average</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: TrendAnalysis -->
+                </div>
+                <!-- @END_COMPONENT: DetailedAnalytics -->
+                
+                <!-- @COMPONENT: AlertsAndPredictions [AI insights section] -->
+                <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-card rounded-lg p-6 border border-border">
+                        <h3 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-primary"></i>
+                            Active Alerts
+                        </h3>
+                        <div class="space-y-3">
+                            <!-- @MAP: alerts.map(alert => ( -->
+                            <div class="flex items-start gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg" data-mock="true">
+                                <div class="w-2 h-2 bg-destructive rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-foreground text-sm">High Crime Probability - T.Nagar</div>
+                                    <div class="text-xs text-muted-foreground mt-1">AI prediction indicates 85% chance of theft incidents in next 4 hours based on historical patterns and current events.</div>
+                                    <div class="text-xs text-destructive mt-2">Priority: High • 2 hours ago</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg" data-mock="true">
+                                <div class="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-foreground text-sm">Unusual Activity - Anna Nagar</div>
+                                    <div class="text-xs text-muted-foreground mt-1">Social media sentiment analysis shows increased mentions of suspicious activity in residential areas.</div>
+                                    <div class="text-xs text-primary mt-2">Priority: Medium • 5 hours ago</div>
+                                </div>
+                            </div>
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-lg p-6 border border-border">
+                        <h3 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <i class="fas fa-brain text-accent"></i>
+                            AI Insights
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-accent/10 border border-accent/20 rounded-lg" data-mock="true">
+                                <div class="font-medium text-foreground text-sm mb-2">Pattern Recognition</div>
+                                <div class="text-sm text-muted-foreground">Theft incidents show 67% correlation with local festival dates and increased foot traffic in commercial areas.</div>
+                            </div>
+                            
+                            <div class="p-4 bg-primary/10 border border-primary/20 rounded-lg" data-mock="true">
+                                <div class="font-medium text-foreground text-sm mb-2">Predictive Model</div>
+                                <div class="text-sm text-muted-foreground">Next week's crime forecast: 15% decrease in overall incidents due to increased police deployment.</div>
+                            </div>
+                            
+                            <div class="p-4 bg-muted/50 border border-border rounded-lg" data-mock="true">
+                                <div class="font-medium text-foreground text-sm mb-2">Resource Optimization</div>
+                                <div class="text-sm text-muted-foreground">Recommended patrol allocation: 40% Central, 25% South, 20% North, 15% Other districts.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: AlertsAndPredictions -->
+            </div>
+            <!-- @END_COMPONENT: DashboardGrid -->
+        </main>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    
+    <!-- @STATE: crimeData:object = mockChennaiCrimeData -->
+    <!-- @STATE: selectedDistrict:string = 'all' -->
+    <!-- @STATE: selectedTimeframe:string = 'last30days' -->
+    <!-- @STATE: isLoading:boolean = false -->
+    
+    <script>
+    (function() {
+        // TODO: Implement React components with TypeScript for production
+        // TODO: Add real-time data fetching and WebSocket connections
+        // TODO: Integrate Chennai geographic data and mapping libraries
+        // TODO: Implement ML prediction API integration
+        
+        // Mock chart initialization for demonstration
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            },
+            elements: {
+                point: { radius: 0 },
+                line: { tension: 0.4 }
+            }
+        };
+        
+        // Initialize mini charts for crime categories
+        const charts = ['theft', 'burglary', 'robbery', 'violence', 'drugs'];
+        charts.forEach(chart => {
+            const ctx = document.getElementById(chart + 'Chart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+                        datasets: [{
+                            data: generateMockData(11),
+                            borderColor: chart === 'theft' ? 'hsl(280 100% 70%)' : 'hsl(170 70% 50%)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }
+        });
+        
+        // Initialize main trend chart
+        const mainCtx = document.getElementById('mainTrendChart');
+        if (mainCtx) {
+            new Chart(mainCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: 'Theft',
+                            data: generateMockData(12),
+                            borderColor: 'hsl(280 100% 70%)',
+                            backgroundColor: 'hsla(280 100% 70% / 0.1)',
+                            borderWidth: 3,
+                            fill: true
+                        },
+                        {
+                            label: 'Burglary',
+                            data: generateMockData(12),
+                            borderColor: 'hsl(170 70% 50%)',
+                            backgroundColor: 'hsla(170 70% 50% / 0.1)',
+                            borderWidth: 3,
+                            fill: true
+                        },
+                        {
+                            label: 'Violence',
+                            data: generateMockData(12),
+                            borderColor: 'hsl(0 72% 51%)',
+                            backgroundColor: 'hsla(0 72% 51% / 0.1)',
+                            borderWidth: 3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: 'hsl(240 5% 96%)',
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: 'hsl(240 5% 65%)' },
+                            grid: { color: 'hsl(240 6% 26%)' }
+                        },
+                        y: {
+                            ticks: { color: 'hsl(240 5% 65%)' },
+                            grid: { color: 'hsl(240 6% 26%)' }
+                        }
+                    },
+                    elements: {
+                        point: { radius: 4 },
+                        line: { tension: 0.4 }
+                    }
+                }
+            });
+        }
+        
+        function generateMockData(count) {
+            const data = [];
+            let base = Math.floor(Math.random() * 1000) + 500;
+            for (let i = 0; i < count; i++) {
+                base += (Math.random() - 0.5) * 200;
+                data.push(Math.max(0, Math.floor(base)));
+            }
+            return data;
+        }
+        
+        // Mock interactivity for demonstration
+        document.querySelectorAll('[data-event]').forEach(element => {
+            const event = element.getAttribute('data-event');
+            if (event.startsWith('click:')) {
+                element.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Event triggered:', event);
+                    // TODO: Implement actual event handlers
+                });
+            }
+        });
+    })();
+    </script>
+</body>
+<!-- @END_COMPONENT: CrimeLensApp -->
+</html>
