@@ -9,6 +9,7 @@ import { CrimeTrendChart } from "@/components/crime-trend-chart";
 import { DistrictFilter } from "@/components/district-filter";
 import { AlertsPanel } from "@/components/alerts-panel";
 import { AiInsightsPanel } from "@/components/ai-insights-panel";
+import { ChennaiCrimeMap } from "@/components/chennai-crime-map";
 import { RefreshCw, Download, MapPin, Eye, Filter } from "lucide-react";
 import type { DashboardData } from "@shared/schema";
 import { useState } from "react";
@@ -244,27 +245,14 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Mock Chennai Map */}
-              <div className="relative h-80 bg-muted rounded-lg overflow-hidden mb-4">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="w-16 h-16 text-muted-foreground mb-4 mx-auto" />
-                    <p className="text-muted-foreground">Interactive Chennai Crime Map</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Click districts to view detailed statistics
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Mock hotspot indicators */}
-                <div className="absolute top-16 left-20 w-4 h-4 bg-destructive rounded-full animate-pulse" 
-                     title="High Crime Zone: T.Nagar"></div>
-                <div className="absolute top-24 right-24 w-3 h-3 bg-primary rounded-full animate-pulse" 
-                     title="Medium Crime Zone: Anna Nagar"></div>
-                <div className="absolute bottom-20 left-16 w-3 h-3 bg-accent rounded-full animate-pulse" 
-                     title="Low Crime Zone: Velachery"></div>
-                <div className="absolute bottom-32 right-20 w-4 h-4 bg-destructive rounded-full animate-pulse" 
-                     title="High Crime Zone: Egmore"></div>
+              {/* Chennai Crime Map */}
+              <div className="mb-4">
+                <ChennaiCrimeMap 
+                  crimeStats={filteredCrimeStats}
+                  districts={dashboardData.districts}
+                  selectedDistrict={selectedDistrict}
+                  className="h-80 w-full rounded-lg"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
