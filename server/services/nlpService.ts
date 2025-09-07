@@ -43,14 +43,14 @@ interface SocialMediaPost {
 }
 
 export class NLPService {
-  private nlpManager: NlpManager;
+  private nlpManager!: NlpManager;
   private sentimentAnalyzer: any;
   private isInitialized: boolean = false;
-  private crimeKeywords: Set<string>;
-  private hateSpeechKeywords: Set<string>;
-  private tamilSentimentWords: Map<string, number>;
-  private hindiSentimentWords: Map<string, number>;
-  private teluguSentimentWords: Map<string, number>;
+  private crimeKeywords!: Set<string>;
+  private hateSpeechKeywords!: Set<string>;
+  private tamilSentimentWords!: Map<string, number>;
+  private hindiSentimentWords!: Map<string, number>;
+  private teluguSentimentWords!: Map<string, number>;
 
   constructor() {
     this.initializeKeywords();
@@ -271,7 +271,7 @@ export class NLPService {
     const categories: string[] = [];
 
     // Check for hate speech keywords
-    for (const keyword of this.hateSpeechKeywords) {
+    for (const keyword of Array.from(this.hateSpeechKeywords)) {
       if (lowerText.includes(keyword)) {
         hatefulWords++;
         
@@ -308,14 +308,14 @@ export class NLPService {
     return {
       detected,
       confidence,
-      categories: [...new Set(categories)] // Remove duplicates
+      categories: Array.from(new Set(categories)) // Remove duplicates
     };
   }
 
   isCrimeRelated(text: string): boolean {
     const lowerText = text.toLowerCase();
     
-    for (const keyword of this.crimeKeywords) {
+    for (const keyword of Array.from(this.crimeKeywords)) {
       if (lowerText.includes(keyword.toLowerCase())) {
         return true;
       }

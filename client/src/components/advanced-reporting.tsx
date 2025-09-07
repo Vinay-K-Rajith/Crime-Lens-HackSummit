@@ -31,6 +31,7 @@ import {
   Users
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { ChennaiEvents } from "@/components/chennai-events";
 
 interface ReportTemplate {
   id: string;
@@ -349,11 +350,12 @@ export function AdvancedReporting({ className = "" }: AdvancedReportingProps) {
       </div>
 
       <Tabs defaultValue="generate" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="generate">Generate</TabsTrigger>
           <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
           <TabsTrigger value="jobs">Export Jobs</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generate" className="space-y-6">
@@ -721,6 +723,17 @@ export function AdvancedReporting({ className = "" }: AdvancedReportingProps) {
               ))}
             </div>
           </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="events" className="space-y-4">
+          <div className="mb-4">
+            <h4 className="font-medium text-foreground mb-2">Major Events Intelligence</h4>
+            <p className="text-sm text-muted-foreground">
+              Monitor upcoming major events in Chennai that may impact police resource allocation and crowd management requirements.
+            </p>
+          </div>
+          
+          <ChennaiEvents className="w-full" />
         </TabsContent>
       </Tabs>
     </Card>

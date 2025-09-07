@@ -16,26 +16,37 @@ import { PredictiveHotspotAnalysis } from "@/components/predictive-hotspot-analy
 import { ResourceAllocationOptimizer } from "@/components/resource-allocation-optimizer";
 import { SocialMediaAnalysis } from "@/components/social-media-analysis";
 import { AdvancedReporting } from "@/components/advanced-reporting";
-import { RefreshCw, Download, MapPin, Eye, Filter, Activity, Brain, Route, Twitter, FileText } from "lucide-react";
+import { RefreshCw, Download, MapPin, Eye, Filter, Activity, Brain, Route, Twitter, FileText, LogOut, User } from "lucide-react";
 import type { DashboardData } from "@shared/schema";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
+  const { user, logout } = useAuth();
   const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("last30days");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([
-    "theft",
-    "burglary", 
-    "robbery"
-  ]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
   const [activeView, setActiveView] = useState<string>("overview");
+  const [mapViewMode, setMapViewMode] = useState<string>("markers"); // "markers" or "heatmap"
 
+  // Main dashboard data query
   const { 
     data: dashboardData, 
     isLoading, 
     refetch 
   } = useQuery<DashboardData>({
-    queryKey: ["/api/dashboard"],
+    queryKey: ["/api/mongodb/dashboard"],
+  });
+
+  // Unified districts query for consistent filtering
+  const { data: unifiedDistricts, isLoading: isLoadingDistricts } = useQuery({
+    queryKey: ["/api/mongodb/districts"],
+    queryFn: async () => {
+      const response = await fetch('/api/mongodb/districts');
+      if (!response.ok) throw new Error('Failed to fetch districts');
+      return response.json();
+    }
   });
 
   const handleRefresh = () => {
@@ -55,7 +66,7 @@ export default function Dashboard() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingDistricts) {
     return (
       <div className="flex h-screen bg-background">
         <div className="w-80 bg-card border-r border-border p-6">
@@ -95,7 +106,7 @@ export default function Dashboard() {
   }
 
   const filteredCrimeStats = dashboardData.crimeStats.filter(stat =>
-    selectedCategories.includes(stat.category.id)
+    selectedCategories.length === 0 || selectedCategories.includes(stat.category.id)
   );
 
   return (
@@ -132,7 +143,7 @@ export default function Dashboard() {
                 MAP FILTERS
               </h3>
               <DistrictFilter
-                districts={dashboardData.districts}
+                districts={unifiedDistricts || dashboardData.districts}
                 selectedDistrict={selectedDistrict}
                 onDistrictChange={setSelectedDistrict}
               />
@@ -157,6 +168,24 @@ export default function Dashboard() {
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* Severity Filter */}
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                SEVERITY FILTER
+              </h3>
+              <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
+                <SelectTrigger data-testid="select-severity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Severities</SelectItem>
+                  <SelectItem value="high">High Severity</SelectItem>
+                  <SelectItem value="medium">Medium Severity</SelectItem>
+                  <SelectItem value="low">Low Severity</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Time Period */}
@@ -276,20 +305,66 @@ export default function Dashboard() {
                       Crime Hotspots by District
                     </h3>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" className="text-xs">Heatmap</Button>
-                      <Button size="sm" variant="ghost" className="text-xs">Markers</Button>
+                      <Button 
+                        size="sm" 
+                        variant={mapViewMode === "heatmap" ? "default" : "ghost"}
+                        className="text-xs"
+                        onClick={() => setMapViewMode("heatmap")}
+                      >
+                        Heatmap
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={mapViewMode === "markers" ? "default" : "ghost"}
+                        className="text-xs"
+                        onClick={() => setMapViewMode("markers")}
+                      >
+                        Markers
+                      </Button>
                     </div>
                   </div>
 
                   {/* Chennai Crime Map */}
                   <div className="mb-4">
-                    <ChennaiCrimeMap 
-                      crimeStats={filteredCrimeStats}
-                      districts={dashboardData.districts}
-                      selectedDistrict={selectedDistrict}
-                      className="h-80 w-full rounded-lg"
-                    />
+                  <ChennaiCrimeMap 
+                    crimeStats={filteredCrimeStats}
+                    districts={unifiedDistricts || dashboardData.districts}
+                    selectedDistrict={selectedDistrict}
+                    selectedSeverity={selectedSeverity}
+                    selectedCategories={selectedCategories}
+                    mapViewMode={mapViewMode}
+                    className="h-80 w-full rounded-lg"
+                  />
                   </div>
+
+                  {/* Heatmap Legend */}
+                  {mapViewMode === "heatmap" && (
+                    <div className="mb-4 p-3 bg-muted rounded-lg">
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Crime Intensity Scale</h4>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                          <span>Low</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-green-500 rounded"></div>
+                          <span>Low-Med</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                          <span>Medium</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                          <span>High</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-red-500 rounded"></div>
+                          <span>Very High</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">

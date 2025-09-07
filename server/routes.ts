@@ -3,6 +3,60 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { nlpService } from "./services/nlpService";
 import { twitterService } from "./services/twitterService";
+import { mongoDBService } from "./services/mongodb";
+import authRoutes from "./routes/auth";
+import eventsRoutes from "./routes/events";
+
+// Ward to District mapping for Chennai
+const WARD_TO_DISTRICT_MAPPING: Record<string, { district: string; region: string; population: number }> = {
+  // Central Chennai Districts
+  'Ward-1': { district: 'Central Chennai', region: 'Central', population: 45000 },
+  'Ward-2': { district: 'Central Chennai', region: 'Central', population: 42000 },
+  'Ward-3': { district: 'Central Chennai', region: 'Central', population: 38000 },
+  'Ward-4': { district: 'Anna Nagar', region: 'Central', population: 35000 },
+  'Ward-5': { district: 'Anna Nagar', region: 'Central', population: 40000 },
+  'Ward-6': { district: 'Anna Nagar', region: 'Central', population: 37000 },
+  'Ward-7': { district: 'T.Nagar', region: 'Central', population: 32000 },
+  'Ward-8': { district: 'T.Nagar', region: 'Central', population: 28000 },
+  'Ward-9': { district: 'T.Nagar', region: 'Central', population: 30000 },
+  'Ward-10': { district: 'T.Nagar', region: 'Central', population: 33000 },
+  
+  // North Chennai Districts
+  'Ward-11': { district: 'North Chennai', region: 'North', population: 48000 },
+  'Ward-12': { district: 'North Chennai', region: 'North', population: 52000 },
+  'Ward-13': { district: 'North Chennai', region: 'North', population: 46000 },
+  'Ward-14': { district: 'North Chennai', region: 'North', population: 44000 },
+  'Ward-15': { district: 'Avadi', region: 'North', population: 38000 },
+  'Ward-16': { district: 'Avadi', region: 'North', population: 41000 },
+  'Ward-17': { district: 'Avadi', region: 'North', population: 39000 },
+  
+  // South Chennai Districts
+  'Ward-18': { district: 'South Chennai', region: 'South', population: 55000 },
+  'Ward-19': { district: 'South Chennai', region: 'South', population: 58000 },
+  'Ward-20': { district: 'South Chennai', region: 'South', population: 53000 },
+  'Ward-21': { district: 'South Chennai', region: 'South', population: 49000 },
+  'Ward-22': { district: 'Velachery', region: 'South', population: 43000 },
+  'Ward-23': { district: 'Velachery', region: 'South', population: 47000 },
+  'Ward-24': { district: 'Velachery', region: 'South', population: 45000 },
+  'Ward-25': { district: 'Tambaram', region: 'South', population: 42000 },
+  'Ward-26': { district: 'Tambaram', region: 'South', population: 46000 },
+  'Ward-27': { district: 'Tambaram', region: 'South', population: 44000 },
+  
+  // Additional wards
+  'Ward-28': { district: 'Central Chennai', region: 'Central', population: 36000 },
+  'Ward-29': { district: 'Anna Nagar', region: 'Central', population: 34000 },
+  'Ward-30': { district: 'North Chennai', region: 'North', population: 51000 },
+  'Ward-31': { district: 'South Chennai', region: 'South', population: 56000 },
+  'Ward-32': { district: 'Velachery', region: 'South', population: 48000 },
+  'Ward-33': { district: 'Tambaram', region: 'South', population: 43000 },
+  'Ward-34': { district: 'Avadi', region: 'North', population: 40000 },
+  'Ward-35': { district: 'T.Nagar', region: 'Central', population: 31000 },
+};
+
+// Helper function to get district info from ward
+function getDistrictFromWard(ward: string) {
+  return WARD_TO_DISTRICT_MAPPING[ward] || { district: 'Unknown District', region: 'Chennai', population: 35000 };
+}
 
 // Helper function to generate mock social media posts
 function generateMockSocialMediaPosts(limit: number) {
@@ -63,7 +117,65 @@ function generateMockSocialMediaPosts(limit: number) {
   });
 }
 
+// Helper functions for data transformation
+function getCrimeIcon(crimeType: string): string {
+  const iconMap: Record<string, string> = {
+    'theft': 'fas fa-user-secret',
+    'burglary': 'fas fa-home',
+    'robbery': 'fas fa-mask',
+    'violence': 'fas fa-fist-raised',
+    'drugs': 'fas fa-pills',
+    'pickpocketing': 'fas fa-hand-holding',
+    'domestic_dispute': 'fas fa-home',
+    'traffic_violation': 'fas fa-car',
+    'assault': 'fas fa-fist-raised',
+    'fraud': 'fas fa-credit-card'
+  };
+  return iconMap[crimeType.toLowerCase()] || 'fas fa-exclamation-triangle';
+}
+
+function getCrimeColor(crimeType: string): string {
+  const colorMap: Record<string, string> = {
+    'theft': 'hsl(280, 100%, 70%)',
+    'burglary': 'hsl(170, 70%, 50%)',
+    'robbery': 'hsl(0, 72%, 51%)',
+    'violence': 'hsl(45, 93%, 58%)',
+    'drugs': 'hsl(260, 100%, 60%)',
+    'pickpocketing': 'hsl(200, 100%, 50%)',
+    'domestic_dispute': 'hsl(30, 100%, 50%)',
+    'traffic_violation': 'hsl(120, 100%, 50%)',
+    'assault': 'hsl(0, 100%, 50%)',
+    'fraud': 'hsl(300, 100%, 50%)'
+  };
+  return colorMap[crimeType.toLowerCase()] || 'hsl(0, 0%, 50%)';
+}
+
+function generateMonthlyData(totalCount: number): Array<{ month: string; count: number }> {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const avgMonthly = totalCount / 12;
+  
+  return months.map(month => ({
+    month,
+    count: Math.floor(avgMonthly * (0.7 + Math.random() * 0.6))
+  }));
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.use("/api/auth", authRoutes);
+  
+  // Events routes
+  app.use("/api/events", eventsRoutes);
+
+  // Health check route
+  app.get("/api/health", (_req, res) => {
+    res.json({ 
+      status: 'OK', 
+      message: 'CrimeLens API is running',
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Crime dashboard API routes
   
   // Get dashboard overview data
@@ -107,6 +219,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching districts:", error);
       res.status(500).json({ message: "Failed to fetch districts" });
+    }
+  });
+
+  // Get unified districts from MongoDB with crime data
+  app.get("/api/mongodb/districts", async (_req, res) => {
+    try {
+      const districtStats = await mongoDBService.getCrimeStatsByDistrict();
+      
+      // Transform MongoDB district data to frontend format
+      const districts = districtStats.map(stat => ({
+        id: stat.district.toLowerCase().replace(/\s+/g, '-'),
+        name: stat.district,
+        region: stat.region,
+        population: stat.population,
+        totalIncidents: stat.totalIncidents,
+        avgLatitude: stat.avgLatitude,
+        avgLongitude: stat.avgLongitude,
+        highSeverityCount: stat.highSeverityCount,
+        mediumSeverityCount: stat.mediumSeverityCount,
+        lowSeverityCount: stat.lowSeverityCount
+      }));
+      
+      res.json(districts);
+    } catch (error) {
+      console.error("Error fetching MongoDB districts:", error);
+      res.status(500).json({ message: "Failed to fetch MongoDB districts" });
     }
   });
 
@@ -379,6 +517,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching district sentiments:", error);
       res.status(500).json({ message: "Failed to fetch district sentiments" });
+    }
+  });
+
+  // MongoDB Crime Data API routes
+  
+  // Get crime data with filters
+  app.get("/api/mongodb/crime-data", async (req, res) => {
+    try {
+      const { crimeType, severity, ward, dateFrom, dateTo, limit } = req.query;
+      
+      const filters = {
+        crimeType: crimeType as string,
+        severity: severity as string,
+        ward: ward as string,
+        dateFrom: dateFrom as string,
+        dateTo: dateTo as string,
+        limit: limit ? parseInt(limit as string) : undefined
+      };
+
+      const data = await mongoDBService.getCrimeData(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching crime data from MongoDB:", error);
+      res.status(500).json({ message: "Failed to fetch crime data" });
+    }
+  });
+
+  // Get crime statistics by district
+  app.get("/api/mongodb/crime-stats/districts", async (_req, res) => {
+    try {
+      const stats = await mongoDBService.getCrimeStatsByDistrict();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching crime stats by district:", error);
+      res.status(500).json({ message: "Failed to fetch district crime statistics" });
+    }
+  });
+
+  // Get crime statistics by type
+  app.get("/api/mongodb/crime-stats/types", async (_req, res) => {
+    try {
+      const stats = await mongoDBService.getCrimeStatsByType();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching crime stats by type:", error);
+      res.status(500).json({ message: "Failed to fetch crime type statistics" });
+    }
+  });
+
+  // Get crime hotspots
+  app.get("/api/mongodb/crime-hotspots", async (req, res) => {
+    try {
+      const { limit = '10' } = req.query;
+      const hotspots = await mongoDBService.getCrimeHotspots(parseInt(limit as string));
+      res.json(hotspots);
+    } catch (error) {
+      console.error("Error fetching crime hotspots:", error);
+      res.status(500).json({ message: "Failed to fetch crime hotspots" });
+    }
+  });
+
+  // Get total crime count
+  app.get("/api/mongodb/total-crimes", async (_req, res) => {
+    try {
+      const count = await mongoDBService.getTotalCrimeCount();
+      res.json({ totalCrimes: count });
+    } catch (error) {
+      console.error("Error fetching total crime count:", error);
+      res.status(500).json({ message: "Failed to fetch total crime count" });
+    }
+  });
+
+  // Get crime data for map visualization
+  app.get("/api/mongodb/map-data", async (req, res) => {
+    try {
+      const { crimeType, severity, ward, district, limit } = req.query;
+      
+      let finalWard = ward as string;
+      
+      // If district is provided instead of ward, convert district to wards
+      if (district && district !== 'all') {
+        const wardList = Object.entries(WARD_TO_DISTRICT_MAPPING)
+          .filter(([, info]) => info.district.toLowerCase().replace(/\s+/g, '-') === district)
+          .map(([wardName]) => wardName);
+        
+        if (wardList.length > 0) {
+          // For now, we'll get data for all wards in the district
+          // In a real implementation, you might want to modify getCrimeDataForMap to handle multiple wards
+          const allWardData = await Promise.all(
+            wardList.map(wardName => 
+              mongoDBService.getCrimeDataForMap({
+                crimeType: crimeType as string,
+                severity: severity as string,
+                ward: wardName,
+                limit: limit ? Math.floor(parseInt(limit as string) / wardList.length) : undefined
+              })
+            )
+          );
+          
+          const combinedData = allWardData.flat();
+          res.json(combinedData);
+          return;
+        }
+      }
+      
+      const filters = {
+        crimeType: crimeType as string,
+        severity: severity as string,
+        ward: finalWard,
+        limit: limit ? parseInt(limit as string) : undefined
+      };
+
+      const data = await mongoDBService.getCrimeDataForMap(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching map data from MongoDB:", error);
+      res.status(500).json({ message: "Failed to fetch map data" });
+    }
+  });
+
+  // Get enhanced dashboard data with MongoDB integration
+  app.get("/api/mongodb/dashboard", async (_req, res) => {
+    try {
+      const [districtStats, typeStats, totalCount, hotspots, alerts, insights] = await Promise.all([
+        mongoDBService.getCrimeStatsByDistrict(),
+        mongoDBService.getCrimeStatsByType(),
+        mongoDBService.getTotalCrimeCount(),
+        mongoDBService.getCrimeHotspots(20),
+        storage.getCrimeAlerts(true),
+        storage.getAiInsights()
+      ]);
+
+      // Transform data to match frontend expectations
+      const districts = districtStats.map(stat => ({
+        id: stat.district.toLowerCase().replace(/\s+/g, '-'),
+        name: stat.district,
+        region: stat.region,
+        population: stat.population,
+        totalIncidents: stat.totalIncidents,
+        avgLatitude: stat.avgLatitude,
+        avgLongitude: stat.avgLongitude,
+        highSeverityCount: stat.highSeverityCount,
+        mediumSeverityCount: stat.mediumSeverityCount,
+        lowSeverityCount: stat.lowSeverityCount
+      }));
+
+      const crimeStats = typeStats.map(stat => ({
+        category: {
+          id: stat.crimeType.toLowerCase().replace(/\s+/g, '-'),
+          name: stat.crimeType.toUpperCase(),
+          icon: getCrimeIcon(stat.crimeType),
+          color: getCrimeColor(stat.crimeType)
+        },
+        incidents: [],
+        totalCount: stat.totalIncidents,
+        changePercent: Math.random() * 40 - 20, // Mock change percentage
+        hotspots: stat.wards.slice(0, 3),
+        monthlyData: generateMonthlyData(stat.totalIncidents)
+      }));
+
+      const dashboardData = {
+        totalIncidents: totalCount,
+        clearanceRate: 73.2, // Mock clearance rate
+        crimeStats,
+        districts,
+        alerts,
+        insights,
+        hotspots
+      };
+
+      res.json(dashboardData);
+    } catch (error) {
+      console.error("Error fetching enhanced dashboard data:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard data" });
     }
   });
 

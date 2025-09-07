@@ -28,7 +28,7 @@ interface TwitterSearchParams {
 }
 
 export class TwitterService {
-  private client: TwitterApi;
+  private client!: TwitterApi;
   private isInitialized = false;
   private lastErrorLogged = 0;
 
@@ -278,8 +278,8 @@ export class TwitterService {
       );
 
       if (chennaiTrend) {
-        const trendsData = await this.client.v1.trends(chennaiTrend.woeid);
-        return trendsData[0]?.trends?.slice(0, 10).map(trend => ({
+        const trendsData = await this.client.v1.trendsByPlace(chennaiTrend.woeid);
+        return trendsData[0]?.trends?.slice(0, 10).map((trend: any) => ({
           keyword: trend.name,
           volume: trend.tweet_volume || Math.floor(Math.random() * 10000) + 1000,
           sentiment: (Math.random() - 0.5) * 2, // -1 to 1

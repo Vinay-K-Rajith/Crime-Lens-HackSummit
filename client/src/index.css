@@ -3,6 +3,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom map icon styles */
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
 :root {
   --background: hsl(240, 10%, 15%);
   --foreground: hsl(240, 5%, 96%);

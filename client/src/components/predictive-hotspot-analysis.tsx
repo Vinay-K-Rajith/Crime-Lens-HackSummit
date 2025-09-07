@@ -18,6 +18,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
 
 interface HotspotPrediction {
@@ -56,6 +57,16 @@ export function PredictiveHotspotAnalysis({ className = "" }: PredictiveHotspotA
   const [timeWindow, setTimeWindow] = useState<'6h' | '12h' | '24h' | '48h' | '7d'>('24h');
   const [isLoading, setIsLoading] = useState(false);
   const [lastAnalysis, setLastAnalysis] = useState<Date>(new Date());
+  
+  // Fetch real districts for consistent naming
+  const { data: realDistricts } = useQuery({
+    queryKey: ['/api/mongodb/districts'],
+    queryFn: async () => {
+      const response = await fetch('/api/mongodb/districts');
+      if (!response.ok) throw new Error('Failed to fetch districts');
+      return response.json();
+    }
+  });
 
   // Mock predictive factors
   const predictiveFactors: PredictiveFactors[] = [
@@ -80,7 +91,8 @@ export function PredictiveHotspotAnalysis({ className = "" }: PredictiveHotspotA
       'Phoenix MarketCity'
     ];
     
-    const districts = ['North Chennai', 'Central Chennai', 'South Chennai', 'West Chennai'];
+    // Use real district names if available, otherwise fallback
+    const districts = realDistricts?.map(d => d.name) || ['North Chennai', 'Central Chennai', 'South Chennai', 'Avadi', 'T.Nagar', 'Anna Nagar', 'Velachery', 'Tambaram'];
     const riskLevels: Array<'very-high' | 'high' | 'medium' | 'low'> = ['very-high', 'high', 'medium', 'low'];
     const crimeTypes = ['Theft', 'Pickpocketing', 'Vehicle Crime', 'Burglary', 'Robbery'];
 

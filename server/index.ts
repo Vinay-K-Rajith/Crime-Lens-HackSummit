@@ -3,10 +3,21 @@ import { config } from "dotenv";
 config();
 
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { mongoDBService } from "./services/mongodb";
 
 const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: ['http://localhost:5003', 'http://127.0.0.1:5003'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -41,28 +52,43 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    // Try to initialize MongoDB connection, but don't fail if it doesn't work
+    try {
+      await mongoDBService.connect();
+      console.log('✅ MongoDB connected successfully');
+    } catch (mongoError) {
+      console.warn('⚠️  MongoDB connection failed, continuing with mock data only');
+      console.warn('MongoDB error:', mongoError.message);
+    }
+    
+    const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+      res.status(status).json({ message });
+      throw err;
+    });
 
-  // Environment variables are now handled by cross-env package for cross-platform compatibility
+    // Environment variables are now handled by cross-env package for cross-platform compatibility
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // The comment says to serve on port 5002, but the code uses 5003.
+    // Make sure the port matches your intended configuration.
+    const port = 5003;
+    server.listen(port, '127.0.0.1', () => {
+      console.log(`Server running on http://127.0.0.1:${port}`);
+      console.log('✅ CrimeLens Chennai is ready!');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-
-  // The comment says to serve on port 5002, but the code uses 5003.
-  // Make sure the port matches your intended configuration.
-  const port = 5003;
-  server.listen(port, '127.0.0.1', () => {
-    console.log(`Server running on http://127.0.0.1:${port}`);
-  });
 })();
