@@ -9,7 +9,7 @@ import { CrimeStatsCard } from "@/components/crime-stats-card";
 import { CrimeTrendChart } from "@/components/crime-trend-chart";
 import { DistrictFilter } from "@/components/district-filter";
 import { AlertsPanel } from "@/components/alerts-panel";
-import { AiInsightsPanel } from "@/components/ai-insights-panel";
+import { FIRRedirectPanel } from "@/components/fir-redirect-panel";
 import { ChennaiCrimeMap } from "@/components/chennai-crime-map";
 import { RealTimeCrimeFeed } from "@/components/real-time-crime-feed";
 import { PredictiveHotspotAnalysis } from "@/components/predictive-hotspot-analysis";
@@ -422,7 +422,7 @@ export default function Dashboard() {
               {/* Alerts and Insights */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <AlertsPanel alerts={dashboardData.alerts} />
-                <AiInsightsPanel insights={dashboardData.insights} />
+                <FIRRedirectPanel />
               </div>
             </TabsContent>
 

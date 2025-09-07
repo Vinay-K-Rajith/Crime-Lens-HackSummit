@@ -6,6 +6,165 @@ import { twitterService } from "./services/twitterService";
 import { mongoDBService } from "./services/mongodb";
 import authRoutes from "./routes/auth";
 import eventsRoutes from "./routes/events";
+import PDFDocument from 'pdfkit';
+
+// Professional PDF generation function using pdfkit
+function generateFIRPDF(fir: any): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50 });
+      const buffers: Buffer[] = [];
+      
+      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
+      
+      // Header
+      doc.fontSize(20)
+         .fillColor('#000080')
+         .text('FIRST INFORMATION REPORT (FIR)', { align: 'center' })
+         .moveDown(0.5);
+      
+      doc.fontSize(14)
+         .fillColor('#000080')
+         .text('Chennai Metropolitan Police', { align: 'center' })
+         .moveDown(0.5);
+      
+      // Add line separator
+      doc.strokeColor('#000080')
+         .lineWidth(2)
+         .moveTo(50, doc.y)
+         .lineTo(550, doc.y)
+         .stroke()
+         .moveDown(1);
+      
+      // FIR Details
+      doc.fontSize(12)
+         .fillColor('#000000')
+         .text(`FIR Number: ${fir.firNumber}`, { continued: true })
+         .text(`        FIR ID: ${fir.firId}`, { align: 'right' })
+         .moveDown(0.5)
+         .text(`Date of Submission: ${new Date(fir.submittedAt).toLocaleDateString()}`, { continued: true })
+         .text(`        Status: ${fir.status}`, { align: 'right' })
+         .moveDown(1);
+      
+      // Personal Details Section
+      addSectionHeader(doc, 'PERSONAL DETAILS');
+      doc.fontSize(11)
+         .text(`Complainant Name: ${fir.complainantName}`)
+         .text(`Father's/Husband's Name: ${fir.fatherHusbandName}`)
+         .text(`Age: ${fir.age}        Gender: ${fir.gender}        Occupation: ${fir.occupation || 'Not specified'}`)
+         .text(`Phone: ${fir.phone}        Email: ${fir.email || 'Not provided'}`)
+         .text(`Address: ${fir.address}`)
+         .moveDown(1);
+      
+      // Incident Details Section
+      addSectionHeader(doc, 'INCIDENT DETAILS');
+      doc.fontSize(11)
+         .text(`Date of Incident: ${fir.incidentDate}        Time: ${fir.incidentTime || 'Not specified'}`)
+         .text(`Police Station: ${fir.policeStation}`)
+         .text(`Type of Crime: ${fir.crimeType}`)
+         .text(`Place of Incident:`)
+         .fontSize(10)
+         .text(`${fir.incidentLocation}`, { indent: 20 })
+         .moveDown(1);
+      
+      // Crime Details Section
+      addSectionHeader(doc, 'CRIME DETAILS');
+      doc.fontSize(11)
+         .text('Description of Incident:')
+         .fontSize(10)
+         .text(`${fir.description}`, { indent: 20, width: 500 })
+         .moveDown(0.5);
+      
+      doc.fontSize(11)
+         .text(`Suspect Name: ${fir.suspectName || 'Unknown'}`)
+         .text(`Estimated Loss: ₹${fir.estimatedLoss || 0}`)
+         .moveDown(0.5);
+      
+      if (fir.suspectDescription) {
+        doc.text('Suspect Description:')
+           .fontSize(10)
+           .text(fir.suspectDescription, { indent: 20, width: 500 })
+           .moveDown(0.5);
+      }
+      
+      if (fir.witnessDetails) {
+        doc.fontSize(11)
+           .text('Witness Details:')
+           .fontSize(10)
+           .text(fir.witnessDetails, { indent: 20, width: 500 })
+           .moveDown(0.5);
+      }
+      
+      if (fir.propertyConcerned) {
+        doc.fontSize(11)
+           .text('Property Concerned:')
+           .fontSize(10)
+           .text(fir.propertyConcerned, { indent: 20, width: 500 })
+           .moveDown(1);
+      }
+      
+      // Additional Information Section
+      addSectionHeader(doc, 'ADDITIONAL INFORMATION');
+      doc.fontSize(11)
+         .text(`Previous Complaint Filed: ${fir.previousComplaint ? 'Yes' : 'No'}`);
+      
+      if (fir.previousComplaint && fir.previousComplaintDetails) {
+        doc.text('Previous Complaint Details:')
+           .fontSize(10)
+           .text(fir.previousComplaintDetails, { indent: 20, width: 500 })
+           .moveDown(0.5);
+      }
+      
+      if (fir.additionalInfo) {
+        doc.fontSize(11)
+           .text('Additional Information:')
+           .fontSize(10)
+           .text(fir.additionalInfo, { indent: 20, width: 500 })
+           .moveDown(1);
+      }
+      
+      // Footer
+      doc.moveDown(2);
+      addSectionHeader(doc, 'IMPORTANT NOTICE');
+      doc.fontSize(10)
+         .fillColor('#666666')
+         .text('This FIR has been digitally submitted and recorded in the Chennai Metropolitan Police database.', { align: 'center' })
+         .moveDown(0.5)
+         .text('For any queries regarding this FIR, please contact:', { align: 'center' })
+         .text(`FIR Number: ${fir.firNumber} | Police Station: ${fir.policeStation} | Emergency: 100`, { align: 'center' })
+         .moveDown(1)
+         .text(`Generated on: ${new Date().toLocaleString()}`, { align: 'center' })
+         .moveDown(1);
+      
+      // Footer line
+      doc.strokeColor('#000080')
+         .lineWidth(1)
+         .moveTo(50, doc.y)
+         .lineTo(550, doc.y)
+         .stroke();
+      
+      doc.fontSize(12)
+         .fillColor('#000080')
+         .text('Chennai Metropolitan Police - Digital FIR System', { align: 'center' });
+      
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Helper function to add section headers
+function addSectionHeader(doc: PDFKit.PDFDocument, title: string) {
+  doc.fontSize(12)
+     .fillColor('#000080')
+     .text(title, { underline: true })
+     .fillColor('#000000')
+     .moveDown(0.5);
+}
+
 
 // Ward to District mapping for Chennai
 const WARD_TO_DISTRICT_MAPPING: Record<string, { district: string; region: string; population: number }> = {
@@ -691,6 +850,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching enhanced dashboard data:", error);
       res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+
+  // FIR API routes
+  
+  // Submit FIR
+  app.post("/api/submit-fir", async (req, res) => {
+    try {
+      const firData = req.body;
+      
+      // Validate required fields
+      const requiredFields = [
+        'complainantName', 'fatherHusbandName', 'age', 'gender', 
+        'address', 'phone', 'incidentDate', 'incidentLocation', 
+        'policeStation', 'crimeType', 'description'
+      ];
+      
+      const missingFields = requiredFields.filter(field => !firData[field]);
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          message: `Missing required fields: ${missingFields.join(', ')}` 
+        });
+      }
+      
+      const result = await mongoDBService.submitFIR(firData);
+      res.json(result);
+    } catch (error) {
+      console.error("Error submitting FIR:", error);
+      res.status(500).json({ message: "Failed to submit FIR" });
+    }
+  });
+
+  // Get FIR by ID
+  app.get("/api/fir/:firId", async (req, res) => {
+    try {
+      const { firId } = req.params;
+      const fir = await mongoDBService.getFIRById(firId);
+      res.json(fir);
+    } catch (error) {
+      console.error("Error fetching FIR:", error);
+      if (error.message === 'FIR not found') {
+        res.status(404).json({ message: "FIR not found" });
+      } else {
+        res.status(500).json({ message: "Failed to fetch FIR" });
+      }
+    }
+  });
+
+  // Get FIR by number
+  app.get("/api/fir/number/:firNumber", async (req, res) => {
+    try {
+      const { firNumber } = req.params;
+      const fir = await mongoDBService.getFIRByNumber(firNumber);
+      res.json(fir);
+    } catch (error) {
+      console.error("Error fetching FIR by number:", error);
+      if (error.message === 'FIR not found') {
+        res.status(404).json({ message: "FIR not found" });
+      } else {
+        res.status(500).json({ message: "Failed to fetch FIR" });
+      }
+    }
+  });
+
+  // Get all FIRs with filtering
+  app.get("/api/firs", async (req, res) => {
+    try {
+      const { status, crimeType, policeStation, dateFrom, dateTo, limit = '50', skip = '0' } = req.query;
+      
+      const filters = {
+        status: status as string,
+        crimeType: crimeType as string,
+        policeStation: policeStation as string,
+        dateFrom: dateFrom as string,
+        dateTo: dateTo as string,
+        limit: parseInt(limit as string),
+        skip: parseInt(skip as string)
+      };
+      
+      const result = await mongoDBService.getAllFIRs(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching FIRs:", error);
+      res.status(500).json({ message: "Failed to fetch FIRs" });
+    }
+  });
+
+  // Update FIR status
+  app.put("/api/fir/:firId/status", async (req, res) => {
+    try {
+      const { firId } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const updatedFIR = await mongoDBService.updateFIRStatus(firId, status);
+      res.json(updatedFIR);
+    } catch (error) {
+      console.error("Error updating FIR status:", error);
+      if (error.message === 'FIR not found') {
+        res.status(404).json({ message: "FIR not found" });
+      } else {
+        res.status(500).json({ message: "Failed to update FIR status" });
+      }
+    }
+  });
+
+  // Generate PDF for FIR
+  app.get("/api/generate-pdf/:firId", async (req, res) => {
+    try {
+      const { firId } = req.params;
+      const fir = await mongoDBService.getFIRById(firId);
+      
+      // Generate PDF content
+      const pdfBuffer = await generateFIRPDF(fir);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="FIR_${fir.firNumber}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length.toString());
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating FIR PDF:", error);
+      if (error.message === 'FIR not found') {
+        res.status(404).json({ message: "FIR not found" });
+      } else {
+        res.status(500).json({ message: "Failed to generate PDF" });
+      }
     }
   });
 

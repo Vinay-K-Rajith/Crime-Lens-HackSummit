@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/auth/LoginPage";
 import Dashboard from "@/pages/dashboard";
 import NLPTest from "@/pages/nlp-test";
+import FIRPage from "@/pages/fir";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedRouter() {
@@ -14,6 +15,7 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/nlp-test" component={NLPTest} />
+      <Route path="/fir" component={FIRPage} />
       <Route component={NotFound} />
     </Switch>
   );

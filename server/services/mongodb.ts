@@ -14,6 +14,49 @@ const CrimeDataSchema = new mongoose.Schema({
 
 const CrimeData = mongoose.model('CrimeData', CrimeDataSchema);
 
+// Define the FIR schema
+const FIRSchema = new mongoose.Schema({
+  firNumber: { type: String, required: true, unique: true },
+  firId: { type: String, required: true, unique: true },
+  
+  // Personal Details
+  complainantName: { type: String, required: true },
+  fatherHusbandName: { type: String, required: true },
+  age: { type: Number, required: true },
+  gender: { type: String, required: true },
+  occupation: { type: String },
+  address: { type: String, required: true },
+  phone: { type: String, required: true },
+  email: { type: String },
+  
+  // Incident Details
+  incidentDate: { type: String, required: true },
+  incidentTime: { type: String },
+  incidentLocation: { type: String, required: true },
+  policeStation: { type: String, required: true },
+  crimeType: { type: String, required: true },
+  
+  // Crime Details
+  description: { type: String, required: true },
+  suspectName: { type: String },
+  suspectDescription: { type: String },
+  witnessDetails: { type: String },
+  propertyConcerned: { type: String },
+  estimatedLoss: { type: Number, default: 0 },
+  
+  // Additional Information
+  previousComplaint: { type: Boolean, default: false },
+  previousComplaintDetails: { type: String },
+  additionalInfo: { type: String },
+  
+  // System fields
+  status: { type: String, default: 'Submitted', enum: ['Submitted', 'Under Investigation', 'Closed', 'Resolved'] },
+  submittedAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { collection: 'FIR' });
+
+const FIR = mongoose.model('FIR', FIRSchema);
+
 class MongoDBService {
   private isConnected: boolean = false;
 
@@ -424,6 +467,153 @@ class MongoDBService {
     } catch (error) {
       console.error('Error fetching crime data for map:', error);
       throw error;
+    }
+  }
+
+  // FIR methods
+  async submitFIR(firData: any): Promise<{ firId: string; firNumber: string }> {
+    try {
+      // Generate unique FIR ID and Number
+      const firId = this.generateFIRId();
+      const firNumber = await this.generateFIRNumber();
+      
+      const newFIR = new FIR({
+        ...firData,
+        firId,
+        firNumber,
+        submittedAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      await newFIR.save();
+      
+      console.log(`✅ FIR submitted successfully - ID: ${firId}, Number: ${firNumber}`);
+      return { firId, firNumber };
+    } catch (error) {
+      console.error('Error submitting FIR:', error);
+      throw error;
+    }
+  }
+
+  async getFIRById(firId: string): Promise<any> {
+    try {
+      const fir = await FIR.findOne({ firId });
+      if (!fir) {
+        throw new Error('FIR not found');
+      }
+      return fir;
+    } catch (error) {
+      console.error('Error fetching FIR:', error);
+      throw error;
+    }
+  }
+
+  async getFIRByNumber(firNumber: string): Promise<any> {
+    try {
+      const fir = await FIR.findOne({ firNumber });
+      if (!fir) {
+        throw new Error('FIR not found');
+      }
+      return fir;
+    } catch (error) {
+      console.error('Error fetching FIR by number:', error);
+      throw error;
+    }
+  }
+
+  async getAllFIRs(filters: {
+    status?: string;
+    crimeType?: string;
+    policeStation?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    limit?: number;
+    skip?: number;
+  } = {}): Promise<{ firs: any[], total: number }> {
+    try {
+      const query: any = {};
+      
+      if (filters.status) {
+        query.status = filters.status;
+      }
+      
+      if (filters.crimeType) {
+        query.crimeType = { $regex: filters.crimeType, $options: 'i' };
+      }
+      
+      if (filters.policeStation) {
+        query.policeStation = { $regex: filters.policeStation, $options: 'i' };
+      }
+      
+      if (filters.dateFrom || filters.dateTo) {
+        query.submittedAt = {};
+        if (filters.dateFrom) {
+          query.submittedAt.$gte = new Date(filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          query.submittedAt.$lte = new Date(filters.dateTo);
+        }
+      }
+
+      const limit = filters.limit || 50;
+      const skip = filters.skip || 0;
+      
+      const firs = await FIR.find(query)
+        .sort({ submittedAt: -1 })
+        .limit(limit)
+        .skip(skip);
+        
+      const total = await FIR.countDocuments(query);
+      
+      return { firs, total };
+    } catch (error) {
+      console.error('Error fetching FIRs:', error);
+      throw error;
+    }
+  }
+
+  async updateFIRStatus(firId: string, status: string): Promise<any> {
+    try {
+      const updatedFIR = await FIR.findOneAndUpdate(
+        { firId },
+        { status, updatedAt: new Date() },
+        { new: true }
+      );
+      
+      if (!updatedFIR) {
+        throw new Error('FIR not found');
+      }
+      
+      return updatedFIR;
+    } catch (error) {
+      console.error('Error updating FIR status:', error);
+      throw error;
+    }
+  }
+
+  private generateFIRId(): string {
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `FIR_${timestamp}_${random}`.toUpperCase();
+  }
+
+  private async generateFIRNumber(): Promise<string> {
+    try {
+      const currentYear = new Date().getFullYear();
+      const yearStr = currentYear.toString();
+      
+      // Count FIRs for current year
+      const count = await FIR.countDocuments({
+        firNumber: { $regex: `^CHN/${yearStr}/` }
+      });
+      
+      const nextNumber = (count + 1).toString().padStart(6, '0');
+      return `CHN/${yearStr}/${nextNumber}`;
+    } catch (error) {
+      console.error('Error generating FIR number:', error);
+      // Fallback to simple numbering
+      const timestamp = Date.now();
+      return `CHN/${new Date().getFullYear()}/${timestamp.toString().slice(-6)}`;
     }
   }
 }
